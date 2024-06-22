@@ -1,4 +1,26 @@
 {
   "name": "espresso",
-  "packageManager": "yarn@4.1.1"
+  "packageManager": "yarn@4.3.1",
+  "bin": "./src/core/index.ts",
+  "type": "module",
+  "scripts": {
+    "esp": "tsx ./src/core/index.ts",
+    "demo": "espresso ./src/demo",
+    "test": "tsx ./src/demo/users-greet.ts"
+  },
+  "devDependencies": {
+    "@types/debug": "^4",
+    "@types/node": "^20.14.8",
+    "@types/yargs": "^17.0.32",
+    "prettier": "^3.3.2",
+    "tsx": "^4.15.7",
+    "typescript": "^5.5.2"
+  },
+  "prettier": {},
+  "dependencies": {
+    "ajv": "^8.16.0",
+    "cosmiconfig": "^9.0.0",
+    "debug": "^4.3.5",
+    "yargs": "^17.7.2"
+  }
 }
