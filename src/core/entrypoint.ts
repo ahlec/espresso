@@ -52,23 +52,45 @@ export type MainFn<
   ctx: MainContext<TProvider, TContext>,
 ) => MainReturnType | Promise<MainReturnType>;
 
+const INTERNAL_FLAG = "espresso.entrypoint";
+
 class Entrypoint<
   TProvider extends ProviderConstraint,
   TCommand extends CommandConstraint<TProvider>,
 > {
+  public static is(
+    obj: unknown,
+  ): obj is Entrypoint<
+    ProviderConstraint,
+    CommandConstraint<ProviderConstraint>
+  > {
+    if (typeof obj !== "object" || obj === null || Array.isArray(obj)) {
+      return false;
+    }
+
+    return (
+      "__internalFlag" in obj &&
+      obj.__internalFlag === INTERNAL_FLAG &&
+      "main" in obj &&
+      typeof obj.main === "function" &&
+      "run" in obj &&
+      typeof obj.run === "function"
+    );
+  }
+
+  private readonly __internalFlag = INTERNAL_FLAG;
+
   public constructor(
     private readonly provider: ProviderContext<TProvider>,
     private readonly main: MainFn<TProvider, TCommand>,
     private readonly dependencies: readonly Dependency<TProvider>[],
   ) {}
 
-  public async run(): Promise<void> {
+  public async run(): Promise<number> {
     const undoStack = new UndoStack();
     const dependencies = new DependencyStack(this.provider).get(
       this.dependencies,
     );
-
-    debug("argv:", process.argv);
 
     debug("Dependencies:");
     dependencies.forEach(({ chains, dependency, requires }, index): void => {
@@ -95,7 +117,9 @@ class Entrypoint<
 
       const result = await this.main({ ...args, ...resources });
       if (typeof result === "number") {
-        process.exitCode = result;
+        return result;
+      } else {
+        return 0;
       }
     } finally {
       await undoStack.undo();

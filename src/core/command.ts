@@ -94,15 +94,11 @@ class Command<
   public main(
     fn: MainFn<TProvider, TContext>,
   ): Entrypoint<TProvider, TContext> {
-    const entrypoint = new Entrypoint<TProvider, TContext>(
+    return new Entrypoint<TProvider, TContext>(
       this.provider,
       fn,
       Object.values(this.using),
     );
-
-    entrypoint.run();
-
-    return entrypoint;
   }
 }
 

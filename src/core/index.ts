@@ -1,10 +1,11 @@
 import Ajv from "ajv";
-import { ChildProcess, spawn } from "child_process";
 import { cosmiconfigSync } from "cosmiconfig";
+import crossImport from "cross-import";
 import makeDebug from "debug";
 import { existsSync } from "fs";
 import path from "path";
 import { hideBin } from "yargs/helpers";
+import Entrypoint from "./entrypoint";
 
 const debug = makeDebug("espresso:entrypoint");
 
@@ -20,6 +21,15 @@ if (!existsSync(cliRoot)) {
   process.exit(1);
 }
 
+/**
+ * TODO: Should config be found on the Program?
+ * `espresso` takes the index.ts file -- the root of the Program.
+ * Expects an export of Program.
+ *
+ * On the program is all of the config, as options. It allows for
+ * customizing behavior, AND it reduces the total amount of config.
+ */
+
 // Find our runtime config
 const configExplorer = cosmiconfigSync("espresso");
 const configResult = configExplorer.search(cliRoot);
@@ -34,7 +44,6 @@ debug("Config path:", configResult.filepath);
 interface Config {
   launcher?: Record<ExtensionStr, string | undefined>;
 }
-
 const validateConfig = new Ajv().compile<Config>({
   type: "object",
   properties: {
@@ -56,35 +65,16 @@ if (!validateConfig(configResult.config)) {
 
 const { config } = configResult;
 
-// Build our extensions catalog
-interface ExtensionDefinition {
-  extension: ExtensionStr;
-  runtime: string | null;
-}
-
-function makeExtension(extension: ExtensionStr): ExtensionDefinition {
-  return {
-    extension,
-    runtime: config.launcher?.[extension] ?? null,
-  };
-}
-
-const EXTENSIONS: readonly ExtensionDefinition[] = [
-  makeExtension(".js"),
-  makeExtension(".cjs"),
-  makeExtension(".mjs"),
-  makeExtension(".ts"),
-];
-
-EXTENSIONS.forEach(({ extension, runtime }): void => {
-  debug(
-    `Extension: '${extension}'`,
-    runtime ? `(runtime: \`${runtime}\`)` : undefined,
-  );
-});
-
 // Locate the right script to run
-function runScript(): ChildProcess | null {
+interface ImportScript {
+  filename: string;
+  module: unknown;
+  args: readonly string[];
+}
+
+const EXTENSIONS: readonly ExtensionStr[] = [".js", ".cjs", ".mjs", ".ts"];
+
+function importScript(): ImportScript | null {
   const positionalArgsStack: string[] = [];
   const possibleArgs: string[] = cliArgsRaw.map((el) => String(el));
 
@@ -105,7 +95,7 @@ function runScript(): ChildProcess | null {
 
     const filenameNoExt = path.resolve(cliRoot, possibleArgs.join("-"));
 
-    for (const { extension, runtime } of EXTENSIONS) {
+    for (const extension of EXTENSIONS) {
       const filename = filenameNoExt + extension;
       debug("Considering:", filename);
       if (existsSync(filename)) {
@@ -113,14 +103,13 @@ function runScript(): ChildProcess | null {
         const positionalArgs = [...positionalArgsStack].reverse();
         debug("Args:", positionalArgs);
 
-        const spawnCommand = runtime ?? process.argv[0];
-        debug("Spawn command:", spawnCommand);
-        const spawnArgs = [filename, ...positionalArgs];
-        debug("Spawn args:", spawnArgs);
-        // TODO: Pass in something to cause it to trigger main() function?
-        const child = spawn(spawnCommand, spawnArgs, { stdio: "inherit" });
-        debug("Child PID:", child.pid);
-        return child;
+        const relativeFilename = "./" + path.relative(process.cwd(), filename);
+        debug("Relative filename:", relativeFilename);
+        return {
+          filename,
+          module: crossImport(filename),
+          args: positionalArgs,
+        };
       }
     }
 
@@ -130,13 +119,35 @@ function runScript(): ChildProcess | null {
   return null;
 }
 
-const child = runScript();
-if (child) {
-  child.on("exit", (code) => {
-    debug("Child returned code", code);
-    process.exit(code);
-  });
-} else {
+const script = importScript();
+if (!script) {
   console.error("Unable to find script!");
   process.exit(1);
+}
+
+// Get the default export for the script
+let defaultExport: unknown;
+if (
+  typeof script.module === "object" &&
+  script.module !== null &&
+  "default" in script.module
+) {
+  defaultExport = script.module.default;
+} else {
+  console.error(`No default export in file '${script.filename}'`);
+  process.exit(1);
+}
+
+// Run the default export
+// TODO: This is because imported-from-TS Entrypoint != one from this context? Investigate.
+if (Entrypoint.is(defaultExport)) {
+  debug("Running entrypoint for", script.filename);
+  const exitCode = await defaultExport.run();
+  debug("Command exit code:", exitCode);
+  process.exitCode = exitCode;
+} else {
+  console.error(
+    `Unrecognized/unsupported default export in file '${script.filename}'`,
+  );
+  process.exit(0);
 }
