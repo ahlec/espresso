@@ -6,6 +6,7 @@ import { existsSync } from "fs";
 import path from "path";
 import { hideBin } from "yargs/helpers";
 import Entrypoint from "./entrypoint";
+import Runnable from "./runnable";
 
 const debug = makeDebug("espresso:entrypoint");
 
@@ -69,27 +70,61 @@ const { config } = configResult;
 interface ImportScript {
   filename: string;
   module: unknown;
-  args: readonly string[];
+  positionalArgs: readonly string[];
+  flags: Record<string, unknown>;
 }
 
 const EXTENSIONS: readonly ExtensionStr[] = [".js", ".cjs", ".mjs", ".ts"];
 
+function parseFlag(full: string): readonly { flag: string; value: unknown }[] {
+  const flagWithValueMatch = full.match(/^--([^=]+)=(.*)$/);
+  if (flagWithValueMatch) {
+    return [
+      {
+        flag: flagWithValueMatch[1],
+        value: flagWithValueMatch[2],
+      },
+    ];
+  }
+
+  const dashDashFlagMatch = full.match(/^--(.+)$/);
+  if (dashDashFlagMatch) {
+    return [
+      {
+        flag: dashDashFlagMatch[1],
+        value: true,
+      },
+    ];
+  }
+
+  const dashFlagMatch = full.match(/^-(.+)$/);
+  if (dashFlagMatch) {
+    // We explode this style of flag into multiple flags.
+    // Consider `rm -rf` which is the same as `rm -r -f`
+    const individualMatches = dashFlagMatch[1].match(/.{1}/g);
+    return individualMatches?.map((flag) => ({ flag, value: true })) ?? [];
+  }
+
+  throw new Error(`Unable to parse flag '${full}'`);
+}
+
 function importScript(): ImportScript | null {
   const positionalArgsStack: string[] = [];
   const possibleArgs: string[] = cliArgsRaw.map((el) => String(el));
-
-  const moveArg = (): void => {
-    const arg = possibleArgs.pop();
-    if (arg) {
-      positionalArgsStack.push(arg);
-    }
-  };
+  const flags: Record<string, unknown> = {};
 
   while (possibleArgs.length) {
     if (possibleArgs[possibleArgs.length - 1].startsWith("-")) {
       // This is a flag or option, so we'll skip over this
-      debug(`Skipping flag/option '${possibleArgs[possibleArgs.length - 1]}'`);
-      moveArg();
+      const fullFlag = possibleArgs[possibleArgs.length - 1];
+      const parsed = parseFlag(fullFlag);
+      debug(
+        `Parsed '${fullFlag}' as ${parsed.length === 1 ? "flag" : "flags"} ${parsed.map(({ flag, value }) => `'${flag}' with value '${value}' (${typeof value})`).join(", ")}`,
+      );
+      parsed.forEach(({ flag, value }): void => {
+        flags[flag] = value;
+      });
+      possibleArgs.pop();
       continue;
     }
 
@@ -102,18 +137,23 @@ function importScript(): ImportScript | null {
         debug("Found:", filename);
         const positionalArgs = [...positionalArgsStack].reverse();
         debug("Args:", positionalArgs);
+        debug("Flags:", flags);
 
         const relativeFilename = "./" + path.relative(process.cwd(), filename);
         debug("Relative filename:", relativeFilename);
         return {
           filename,
           module: crossImport(filename),
-          args: positionalArgs,
+          positionalArgs,
+          flags,
         };
       }
     }
 
-    moveArg();
+    const arg = possibleArgs.pop();
+    if (arg) {
+      positionalArgsStack.push(arg);
+    }
   }
 
   return null;
@@ -140,10 +180,13 @@ if (
 
 // Run the default export
 // TODO: This is because imported-from-TS Entrypoint != one from this context? Investigate.
-if (Entrypoint.is(defaultExport)) {
-  debug("Running entrypoint for", script.filename);
-  const exitCode = await defaultExport.run();
-  debug("Command exit code:", exitCode);
+if (Runnable.is(defaultExport)) {
+  debug("Executing runnable for", script.filename);
+  const exitCode = await defaultExport.run({
+    flags: script.flags,
+    positional: script.positionalArgs,
+  });
+  debug("Runnable exit code:", exitCode);
   process.exitCode = exitCode;
 } else {
   console.error(

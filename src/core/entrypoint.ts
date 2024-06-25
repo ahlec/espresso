@@ -7,6 +7,7 @@ import DependencyStack, {
 import type { ProviderConstraint, ProvideContext } from "./provider";
 import ProviderContext, { Dependency } from "./provider-context";
 import UndoStack from "./undo-stack";
+import Runnable from "./runnable";
 
 const debug = makeDebug("espresso:command");
 
@@ -52,39 +53,17 @@ export type MainFn<
   ctx: MainContext<TProvider, TContext>,
 ) => MainReturnType | Promise<MainReturnType>;
 
-const INTERNAL_FLAG = "espresso.entrypoint";
-
 class Entrypoint<
   TProvider extends ProviderConstraint,
   TCommand extends CommandConstraint<TProvider>,
-> {
-  public static is(
-    obj: unknown,
-  ): obj is Entrypoint<
-    ProviderConstraint,
-    CommandConstraint<ProviderConstraint>
-  > {
-    if (typeof obj !== "object" || obj === null || Array.isArray(obj)) {
-      return false;
-    }
-
-    return (
-      "__internalFlag" in obj &&
-      obj.__internalFlag === INTERNAL_FLAG &&
-      "main" in obj &&
-      typeof obj.main === "function" &&
-      "run" in obj &&
-      typeof obj.run === "function"
-    );
-  }
-
-  private readonly __internalFlag = INTERNAL_FLAG;
-
+> extends Runnable {
   public constructor(
     private readonly provider: ProviderContext<TProvider>,
     private readonly main: MainFn<TProvider, TCommand>,
     private readonly dependencies: readonly Dependency<TProvider>[],
-  ) {}
+  ) {
+    super();
+  }
 
   public async run(): Promise<number> {
     const undoStack = new UndoStack();
