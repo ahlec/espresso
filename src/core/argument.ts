@@ -3,8 +3,25 @@ export interface ArgDefinition {
   optional: boolean;
 }
 
-class Argument<T extends ArgDefinition> {
-  public constructor(private readonly definition: T) {}
-}
+export type MainArg<T extends ArgDefinition> = [T["optional"]] extends [false]
+  ? string
+  : string | null;
 
-export default Argument;
+type ValidateResult<T extends ArgDefinition> =
+  | { valid: true; data: MainArg<T> }
+  | { valid: false };
+
+export function validateArg<T extends ArgDefinition>(
+  definition: T,
+  value: string | undefined,
+): ValidateResult<T> {
+  if (!definition.optional) {
+    if (!value) {
+      return { valid: false };
+    }
+
+    return { valid: true, data: value };
+  }
+
+  return { valid: true, data: value ?? (null as any) };
+}

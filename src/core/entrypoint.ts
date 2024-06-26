@@ -1,5 +1,5 @@
 import makeDebug from "debug";
-import Argument, { ArgDefinition } from "./argument";
+import { ArgDefinition, MainArg, validateArg } from "./argument";
 import type { CommandConstraint } from "./command";
 import DependencyStack, {
   DependencyEntry,
@@ -7,11 +7,11 @@ import DependencyStack, {
 import type { ProviderConstraint, ProvideContext } from "./provider";
 import ProviderContext, { Dependency } from "./provider-context";
 import UndoStack from "./undo-stack";
-import Runnable from "./runnable";
+import Runnable, { RunArguments } from "./runnable";
 
 const debug = makeDebug("espresso:command");
 
-type ArgDefinitionToParameter<T extends ArgDefinition> = [arg: Argument<T>];
+type ArgDefinitionToParameter<T extends ArgDefinition> = [arg: MainArg<T>];
 
 type ArgsToTuple<TArgs extends readonly ArgDefinition[]> = TArgs extends [
   infer U extends ArgDefinition,
@@ -46,6 +46,10 @@ type MainContext<
 
 type MainReturnType = void | number;
 
+type BindArgsResults<TArgs extends readonly ArgDefinition[]> =
+  | { success: true; results: MainContextArgs<TArgs> }
+  | { success: false; error: "" };
+
 export type MainFn<
   TProvider extends ProviderConstraint,
   TContext extends CommandConstraint<TProvider>,
@@ -61,11 +65,18 @@ class Entrypoint<
     private readonly provider: ProviderContext<TProvider>,
     private readonly main: MainFn<TProvider, TCommand>,
     private readonly dependencies: readonly Dependency<TProvider>[],
+    private readonly args: TCommand["args"],
   ) {
     super();
   }
 
-  public async run(): Promise<number> {
+  public async run({ positional }: RunArguments): Promise<number> {
+    const args = this.bindArgs(positional);
+    if (!args.success) {
+      // TODO: output missing args error message
+      return 1;
+    }
+
     const undoStack = new UndoStack();
     const dependencies = new DependencyStack(this.provider).get(
       this.dependencies,
@@ -87,14 +98,13 @@ class Entrypoint<
     });
 
     try {
-      const resources = (await this.instantiateResources(
+      const resources = await this.instantiateResources(
         dependencies,
         this.dependencies,
         undoStack,
-      )) as MainContextResources<TProvider, TCommand>;
-      const args = { args: [] } as MainContextArgs<TCommand["args"]>;
+      );
 
-      const result = await this.main({ ...args, ...resources });
+      const result = await this.main({ ...args.results, ...resources });
       if (typeof result === "number") {
         return result;
       } else {
@@ -103,6 +113,35 @@ class Entrypoint<
     } finally {
       await undoStack.undo();
     }
+  }
+
+  private bindArgs(
+    positionalArgs: readonly string[],
+  ): BindArgsResults<TCommand["args"]> {
+    const results: MainArg<ArgDefinition>[] = [];
+
+    for (let index = 0; index < this.args.length; ++index) {
+      const definition = this.args[index];
+      const value: string | undefined = positionalArgs[index];
+      const validation = validateArg(definition, value);
+      if (!validation.valid) {
+        return { success: false, error: "" };
+      }
+
+      results.push(validation.data);
+    }
+
+    if (!this.args.length) {
+      return {
+        success: true,
+        results: {} as MainContextArgs<TCommand["args"]>,
+      };
+    }
+
+    return {
+      success: true,
+      results: { args: results } as MainContextArgs<TCommand["args"]>,
+    };
   }
 
   private async instantiateResources(
