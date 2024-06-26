@@ -1,4 +1,4 @@
-import Command from "./command";
+import CommandImpl from "./command";
 import ProviderContext from "./provider-context";
 
 interface ResourceDefinitionConstraint<
@@ -165,7 +165,7 @@ class Provider<TCurr extends ProviderConstraint> {
   }
 
   public cli(name: string) {
-    return Command.begin<TCurr>(new ProviderContext(this.resources), name);
+    return CommandImpl.begin<TCurr>(new ProviderContext(this.resources), name);
   }
 }
 

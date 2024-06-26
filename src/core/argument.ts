@@ -1,5 +1,6 @@
 export interface ArgDefinition {
   name: string;
+  optional: boolean;
 }
 
 class Argument<T extends ArgDefinition> {
