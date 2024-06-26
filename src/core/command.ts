@@ -16,8 +16,7 @@ type Constrain<
 type UnusedResources<
   TProvider extends ProviderConstraint,
   TContext extends CommandConstraint<TProvider>,
-> = PublishedResources<TProvider>;
-// > = Exclude<PublishedResources<TProvider>, TContext["using"]>;
+> = Exclude<PublishedResources<TProvider>, TContext["using"]>;
 
 type Use<
   TProvider extends ProviderConstraint,
