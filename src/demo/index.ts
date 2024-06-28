@@ -42,6 +42,7 @@ const espresso = new Program()
   .provide("cache", ({ logger }) => new Cache(logger), {
     dispose: (cache) => cache.destroy(),
     requires: ["logger"],
-  });
+  })
+  .seal();
 
 export default espresso;

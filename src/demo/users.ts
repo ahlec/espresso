@@ -36,7 +36,7 @@ class UserService {
 }
 
 const users = espresso
-  .group()
+  .group("users")
   .provide(
     "user_datasource",
     ({ database, cache }) => new UserDataSource(cache, database),
@@ -47,6 +47,7 @@ const users = espresso
     ({ user_datasource, logger }) => new UserService(user_datasource, logger),
     { requires: ["user_datasource", "logger"] },
   )
-  .publish("users");
+  .publish("users")
+  .seal();
 
 export default users;

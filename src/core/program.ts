@@ -1,6 +1,6 @@
-import Provider from "./provider";
+import ProviderImpl from "./provider";
 
-class Program extends Provider<{ resources: {}; env: [] }> {
+class Program extends ProviderImpl<{ resources: {}; env: [] }> {
   public constructor() {
     super({});
   }

@@ -1,5 +1,42 @@
-import CommandImpl from "./command";
+import CommandImpl, { Command, CommandConstraint } from "./command";
 import ProviderContext from "./provider-context";
+
+interface BlankSlate<T extends ProviderConstraint> {
+  group(name: string): Provider<T>;
+
+  cli(
+    name: string,
+  ): Command<T, { args: []; hasOptionalArg: false; using: never }>;
+}
+
+interface Provider<T extends ProviderConstraint> {
+  provide<
+    TName extends string,
+    TResource,
+    TOptsRequires extends ProvideOpts<T, TResource>["requires"],
+  >(
+    name: TName,
+    fn: ProvideFn<T, TResource, TOptsRequires>,
+    opts?: MakeProvideOpts<T, TResource, TOptsRequires>,
+  ): Provider<
+    AddResource<
+      T,
+      TName,
+      TResource,
+      {
+        type: TResource;
+        opts: MakeProvideOpts<T, TResource, TOptsRequires>;
+        isPublished: false;
+      }
+    >
+  >;
+
+  publish<TName extends UnpublishedResources<T>>(
+    name: TName,
+  ): Provider<PublishResource<T, TName>>;
+
+  seal(): BlankSlate<T>;
+}
 
 interface ResourceDefinitionConstraint<
   TProvider extends ProviderConstraint,
@@ -111,7 +148,9 @@ type PublishResource<
   }>
 >;
 
-class Provider<TCurr extends ProviderConstraint> {
+class ProviderImpl<TCurr extends ProviderConstraint>
+  implements Provider<TCurr>, BlankSlate<TCurr>
+{
   protected constructor(private readonly resources: Resources<TCurr>) {}
 
   public provide<
@@ -141,7 +180,7 @@ class Provider<TCurr extends ProviderConstraint> {
       isPublished: false,
     };
 
-    return new Provider({
+    return new ProviderImpl({
       ...this.resources,
       [name]: definition,
     } as any); // TODO
@@ -157,7 +196,7 @@ class Provider<TCurr extends ProviderConstraint> {
         isPublished: true,
       } as any, // TODO
     } as Resources<PublishResource<TCurr, TName>>; // TODO
-    return new Provider<PublishResource<TCurr, TName>>(next);
+    return new ProviderImpl<PublishResource<TCurr, TName>>(next);
   }
 
   public group(): Provider<TCurr> {
@@ -167,6 +206,10 @@ class Provider<TCurr extends ProviderConstraint> {
   public cli(name: string) {
     return CommandImpl.begin<TCurr>(new ProviderContext(this.resources), name);
   }
+
+  public seal(): BlankSlate<TCurr> {
+    return this;
+  }
 }
 
-export default Provider;
+export default ProviderImpl;
