@@ -8,6 +8,8 @@ import type { ProviderConstraint, ProvideContext } from "./provider";
 import ProviderContext, { Dependency } from "./provider-context";
 import UndoStack from "./undo-stack";
 import Runnable, { RunArguments } from "./runnable";
+import FlagManager from "./flag-manager";
+import { LongFlag, ShortFlag } from "./flag";
 
 const debug = makeDebug("espresso:command");
 
@@ -38,11 +40,29 @@ type MainContextResources<
       };
     };
 
+type StripFlag<T> = T extends ShortFlag & `-${infer U}`
+  ? U
+  : T extends LongFlag & `--${infer U}`
+    ? U
+    : never;
+
+type MainContextFlags<
+  TProvider extends ProviderConstraint,
+  TContext extends CommandConstraint<TProvider>,
+> = [TContext["flags"]] extends [never]
+  ? {}
+  : {
+      flags: {
+        [K in TContext["flags"] as StripFlag<K>]?: boolean | string;
+      };
+    };
+
 type MainContext<
   TProvider extends ProviderConstraint,
   TContext extends CommandConstraint<TProvider>,
 > = MainContextArgs<TContext["args"]> &
-  MainContextResources<TProvider, TContext>;
+  MainContextResources<TProvider, TContext> &
+  MainContextFlags<TProvider, TContext>;
 
 type MainReturnType = void | number;
 
@@ -66,11 +86,12 @@ class Entrypoint<
     private readonly main: MainFn<TProvider, TCommand>,
     private readonly dependencies: readonly Dependency<TProvider>[],
     private readonly args: TCommand["args"],
+    private readonly flags: FlagManager,
   ) {
     super();
   }
 
-  public async run({ positional }: RunArguments): Promise<number> {
+  public async run({ positional, flags }: RunArguments): Promise<number> {
     const args = this.bindArgs(positional);
     if (!args.success) {
       // TODO: output missing args error message
@@ -98,13 +119,18 @@ class Entrypoint<
     });
 
     try {
+      const flagsContext = this.bindFlags(flags);
       const resources = await this.instantiateResources(
         dependencies,
         this.dependencies,
         undoStack,
       );
 
-      const result = await this.main({ ...args.results, ...resources });
+      const result = await this.main({
+        ...args.results,
+        ...resources,
+        ...flagsContext,
+      });
       if (typeof result === "number") {
         return result;
       } else {
@@ -142,6 +168,19 @@ class Entrypoint<
       success: true,
       results: { args: results } as MainContextArgs<TCommand["args"]>,
     };
+  }
+
+  private bindFlags(
+    flags: Record<string, string | boolean | undefined>,
+  ): MainContextFlags<TProvider, TCommand> {
+    if (this.flags.isEmpty) {
+      return {} as MainContextFlags<TProvider, TCommand>;
+    }
+
+    return { flags: this.flags.getValues(flags) } as MainContextFlags<
+      TProvider,
+      TCommand
+    >;
   }
 
   private async instantiateResources(

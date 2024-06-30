@@ -6,7 +6,10 @@ interface BlankSlate<T extends ProviderConstraint> {
 
   cli(
     name: string,
-  ): Command<T, { args: []; hasOptionalArg: false; using: never }>;
+  ): Command<
+    T,
+    { args: []; flags: never; hasOptionalArg: false; using: never }
+  >;
 }
 
 export interface Provider<T extends ProviderConstraint> {

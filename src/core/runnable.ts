@@ -2,7 +2,7 @@ const INTERNAL_FLAG = "espresso.runnable";
 
 export interface RunArguments {
   positional: readonly string[];
-  flags: Record<string, unknown>;
+  flags: Record<string, string | boolean | undefined>;
 }
 
 abstract class Runnable {

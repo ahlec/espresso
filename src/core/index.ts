@@ -71,12 +71,14 @@ interface ImportScript {
   filename: string;
   module: unknown;
   positionalArgs: readonly string[];
-  flags: Record<string, unknown>;
+  flags: Record<string, string | boolean | undefined>;
 }
 
 const EXTENSIONS: readonly ExtensionStr[] = [".js", ".cjs", ".mjs", ".ts"];
 
-function parseFlag(full: string): readonly { flag: string; value: unknown }[] {
+function parseFlag(
+  full: string,
+): readonly { flag: string; value: string | boolean | undefined }[] {
   const flagWithValueMatch = full.match(/^--([^=]+)=(.*)$/);
   if (flagWithValueMatch) {
     return [
@@ -111,7 +113,7 @@ function parseFlag(full: string): readonly { flag: string; value: unknown }[] {
 function importScript(): ImportScript | null {
   const positionalArgsStack: string[] = [];
   const possibleArgs: string[] = cliArgsRaw.map((el) => String(el));
-  const flags: Record<string, unknown> = {};
+  const flags: Record<string, string | boolean | undefined> = {};
 
   while (possibleArgs.length) {
     if (possibleArgs[possibleArgs.length - 1].startsWith("-")) {
