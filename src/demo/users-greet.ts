@@ -7,9 +7,11 @@ export default users
   .arg("lastname", { optional: true })
   .use("users")
   .use("logger")
-  .main(async ({ args: [id], resources: { users, logger } }) => {
-    logger.log("Starting...");
-    logger.log("id:" + id);
-    await users.greet(17);
-    logger.log("Finished!");
-  });
+  .main(
+    async ({ args: [id, name, lastname], resources: { users, logger } }) => {
+      logger.log("Starting...");
+      logger.log("id:" + id);
+      await users.greet(17);
+      logger.log("Finished!");
+    },
+  );

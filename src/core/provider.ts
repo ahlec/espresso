@@ -9,7 +9,7 @@ interface BlankSlate<T extends ProviderConstraint> {
   ): Command<T, { args: []; hasOptionalArg: false; using: never }>;
 }
 
-interface Provider<T extends ProviderConstraint> {
+export interface Provider<T extends ProviderConstraint> {
   provide<
     TName extends string,
     TResource,

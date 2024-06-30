@@ -35,7 +35,7 @@ export class Cache {
   }
 }
 
-const espresso = new Program()
+const espresso = Program.start()
   .provide("logger", () => new Logger())
   .publish("logger")
   .provide("database", () => new Database())
