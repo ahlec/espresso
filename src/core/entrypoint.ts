@@ -10,6 +10,7 @@ import UndoStack from "./undo-stack";
 import Runnable, { RunArguments } from "./runnable";
 import FlagManager from "./flag-manager";
 import { LongFlag, ShortFlag } from "./flag";
+import Name from "./name";
 
 const debug = makeDebug("espresso:command");
 
@@ -82,14 +83,14 @@ class Entrypoint<
   TCommand extends CommandConstraint<TProvider>,
 > extends Runnable {
   public constructor(
-    name: string,
+    name: Name,
     private readonly provider: ProviderContext<TProvider>,
     private readonly main: MainFn<TProvider, TCommand>,
     private readonly dependencies: readonly Dependency<TProvider>[],
     private readonly args: TCommand["args"],
     private readonly flags: FlagManager,
   ) {
-    super(name, provider.stack);
+    super(name);
   }
 
   public async run({ positional, flags }: RunArguments): Promise<number> {

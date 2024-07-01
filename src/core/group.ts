@@ -1,43 +1,73 @@
+import chalk from "chalk";
 import makeDebug from "debug";
-import { readdirSync } from "fs";
-import path from "path";
-import crossImport from "cross-import";
 import Runnable, { RunArguments } from "./runnable";
+import { hasHelpFlag } from "./flag";
+import Filesystem from "./filesystem";
 
 const debug = makeDebug("espresso:group");
 
 class Group extends Runnable {
   public async run({
-    cliRootDirectory,
-    ownFilename,
+    filesystem,
+    flags,
+    positional,
   }: RunArguments): Promise<number> {
-    const children = this.getChildren(cliRootDirectory, ownFilename);
+    debug("name:", this.name);
+    // Help flags take priority
+    if (hasHelpFlag(flags)) {
+      debug("Help flag present");
+      this.printHelpMessage(filesystem);
+      return 0;
+    }
+
+    // Check to see if there's a default action for this group
+    // This is the action to be run if the group is directly invoked
+    const defaultFile = filesystem.getFile(this.name.default());
+    if (defaultFile) {
+      const runnable = defaultFile.import();
+      if (!runnable) {
+        console.error(
+          "Command has a default action, but doesn't export a Runnable as the default export",
+        );
+        return 1;
+      }
+
+      return runnable.run({ filesystem, flags, positional });
+    }
+
+    // This group doesn't perform any action when invoked, so print out
+    // the help message to facilitate navigation.
+    this.printHelpMessage(filesystem);
+    return 0;
+  }
+
+  private printHelpMessage(filesystem: Filesystem): void {
+    const children = this.getChildren(filesystem);
     debug(
       "children:",
       children.map((child) => child.name),
     );
 
     console.log("help message for", this.name); // TODO
-
-    return 0;
+    console.log(this.name.groups.join(" "), chalk.bold(this.name.self));
   }
 
-  private getChildren(
-    cliRootDirectory: string,
-    ownFilename: string,
-  ): readonly Runnable[] {
-    const filenames = this.getFilenamesToImport(cliRootDirectory, ownFilename);
-    debug("Filenames to import:", filenames);
+  private getChildren(filesystem: Filesystem): readonly Runnable[] {
+    const files = filesystem.findAllChildren(this.name);
+    debug(
+      "Filenames to import:",
+      files.map((file) => file.filename),
+    );
 
     const children: Runnable[] = [];
-    filenames.forEach((filename): void => {
-      const runnable = this.importRunnable(filename);
+    files.forEach((file): void => {
+      const runnable = file.import();
       if (!runnable) {
         return;
       }
 
-      if (!runnable.isChildOf(this)) {
-        debug(`'${filename}' runnable is not a child of this group`);
+      if (!runnable.name.isChildOf(this.name)) {
+        debug(`'${file.filename}' runnable is not a child of this group`);
         return;
       }
 
@@ -45,44 +75,6 @@ class Group extends Runnable {
     });
 
     return children;
-  }
-
-  private getFilenamesToImport(
-    cliRootDirectory: string,
-    ownFilename: string,
-  ): readonly string[] {
-    const filenamePrefix = path.parse(ownFilename).name + "-";
-    debug("Filename prefix to match:", filenamePrefix);
-    return readdirSync(cliRootDirectory)
-      .filter((filename): boolean => filename.startsWith(filenamePrefix))
-      .map((name) => path.resolve(cliRootDirectory, name));
-  }
-
-  private importRunnable(filename: string): Runnable | null {
-    let importedModule: unknown;
-    try {
-      importedModule = crossImport(filename);
-    } catch (e) {
-      debug(`Error importing '${filename}':`, e);
-      return null;
-    }
-
-    if (typeof importedModule !== "object" || importedModule === null) {
-      debug(`Import for '${filename}' was not an object`);
-      return null;
-    }
-
-    if (!("default" in importedModule)) {
-      debug(`No default export from module '${filename}'`);
-      return null;
-    }
-
-    if (!Runnable.is(importedModule.default)) {
-      debug(`Default export for '${filename}' not a Runnable`);
-      return null;
-    }
-
-    return importedModule.default;
   }
 }
 

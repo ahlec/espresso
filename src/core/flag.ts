@@ -89,3 +89,9 @@ export function parseFlag(str: Flag): string {
 
   return parseLongFlag(str);
 }
+
+export function hasHelpFlag(
+  flags: Record<string, string | boolean | undefined>,
+): boolean {
+  return Boolean(flags["h"]) || Boolean(flags["help"]);
+}

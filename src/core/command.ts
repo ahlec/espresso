@@ -2,6 +2,7 @@ import { ArgDefinition } from "./argument";
 import Entrypoint, { MainFn } from "./entrypoint";
 import { Flag, FlagDefinition, parseFlag } from "./flag";
 import FlagManager from "./flag-manager";
+import Name from "./name";
 import { ProviderConstraint, PublishedResources } from "./provider";
 import ProviderContext from "./provider-context";
 
@@ -129,7 +130,7 @@ class CommandImpl<
 {
   public static begin<TProvider extends ProviderConstraint>(
     provider: ProviderContext<TProvider>,
-    name: string,
+    name: Name,
   ): Command<
     TProvider,
     { args: []; flags: never; hasOptionalArg: false; using: never }
@@ -139,7 +140,7 @@ class CommandImpl<
 
   private constructor(
     private readonly provider: ProviderContext<TProvider>,
-    private readonly name: string,
+    private readonly name: Name,
     private readonly args: TContext["args"],
     private readonly flags: FlagManager,
     private readonly using: Using<TProvider, TContext>,

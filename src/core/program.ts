@@ -1,4 +1,5 @@
 import ProviderImpl, { Provider } from "./provider";
+import Name from "./name";
 
 class Program extends ProviderImpl<{ resources: {}; env: [] }> {
   public static start(name: string): Provider<{ resources: {}; env: [] }> {
@@ -6,7 +7,7 @@ class Program extends ProviderImpl<{ resources: {}; env: [] }> {
   }
 
   private constructor(name: string) {
-    super(name, [], {});
+    super(Name.start(name), {});
   }
 }
 

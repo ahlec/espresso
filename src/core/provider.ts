@@ -1,6 +1,7 @@
 import CommandImpl, { Command } from "./command";
 import ProviderContext from "./provider-context";
 import Group from "./group";
+import Name from "./name";
 
 interface BlankSlate<T extends ProviderConstraint> {
   group(name: string): Provider<T>;
@@ -157,11 +158,10 @@ class ProviderImpl<TCurr extends ProviderConstraint>
   implements Provider<TCurr>, BlankSlate<TCurr>
 {
   protected constructor(
-    name: string,
-    stack: readonly string[],
+    name: Name,
     private readonly resources: Resources<TCurr>,
   ) {
-    super(name, stack);
+    super(name);
   }
 
   public provide<
@@ -191,7 +191,7 @@ class ProviderImpl<TCurr extends ProviderConstraint>
       isPublished: false,
     };
 
-    return new ProviderImpl(this.name, this.parentStack, {
+    return new ProviderImpl(this.name, {
       ...this.resources,
       [name]: definition,
     } as any); // TODO
@@ -207,25 +207,20 @@ class ProviderImpl<TCurr extends ProviderConstraint>
         isPublished: true,
       } as any, // TODO
     } as Resources<PublishResource<TCurr, TName>>; // TODO
-    return new ProviderImpl<PublishResource<TCurr, TName>>(
-      this.name,
-      this.parentStack,
-      next,
-    );
+    return new ProviderImpl<PublishResource<TCurr, TName>>(this.name, next);
   }
 
   public group(name: string): Provider<TCurr> {
     return new ProviderImpl<TCurr>(
-      name,
-      [...this.parentStack, this.name],
+      this.name.chain(name, "group"),
       this.resources,
     );
   }
 
   public cli(name: string) {
     return CommandImpl.begin<TCurr>(
-      new ProviderContext([...this.parentStack, this.name], this.resources),
-      name,
+      new ProviderContext(this.resources),
+      this.name.chain(name, "cli"),
     );
   }
 

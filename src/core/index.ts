@@ -1,17 +1,13 @@
-import Ajv from "ajv";
-import { cosmiconfigSync } from "cosmiconfig";
-import crossImport from "cross-import";
 import makeDebug from "debug";
 import { existsSync } from "fs";
 import path from "path";
 import { hideBin } from "yargs/helpers";
-import Runnable from "./runnable";
+import Filesystem, { EspressoFile } from "./filesystem";
+import NameImpl from "./name";
 
 const debug = makeDebug("espresso:entrypoint");
 
 const [cliRootRelative, ...cliArgsRaw] = hideBin(process.argv);
-
-type ExtensionStr = `.${string}`;
 
 // Validate the CLI root
 const cliRoot = path.resolve(String(cliRootRelative));
@@ -21,59 +17,14 @@ if (!existsSync(cliRoot)) {
   process.exit(1);
 }
 
-/**
- * TODO: Should config be found on the Program?
- * `espresso` takes the index.ts file -- the root of the Program.
- * Expects an export of Program.
- *
- * On the program is all of the config, as options. It allows for
- * customizing behavior, AND it reduces the total amount of config.
- */
-
-// Find our runtime config
-const configExplorer = cosmiconfigSync("espresso");
-const configResult = configExplorer.search(cliRoot);
-if (!configResult) {
-  console.error("Could not locate espresso configuration");
-  process.exit(1);
-}
-
-debug("Config path:", configResult.filepath);
-
-// Validate our config
-interface Config {
-  launcher?: Record<ExtensionStr, string | undefined>;
-}
-const validateConfig = new Ajv().compile<Config>({
-  type: "object",
-  properties: {
-    launcher: {
-      type: "object",
-      patternProperties: {
-        "^\\..+$": { type: "string" },
-      },
-      additionalProperties: false,
-    },
-  },
-  additionalProperties: false,
-});
-if (!validateConfig(configResult.config)) {
-  console.error("Config is invalid");
-  console.error(validateConfig.errors);
-  process.exit(1);
-}
-
-const { config } = configResult;
+const filesystem = new Filesystem(cliRoot);
 
 // Locate the right script to run
 interface ImportScript {
-  filename: string;
-  module: unknown;
+  file: EspressoFile;
   positionalArgs: readonly string[];
   flags: Record<string, string | boolean | undefined>;
 }
-
-const EXTENSIONS: readonly ExtensionStr[] = [".js", ".cjs", ".mjs", ".ts"];
 
 function parseFlag(
   full: string,
@@ -129,32 +80,34 @@ function importScript(): ImportScript | null {
       continue;
     }
 
-    const filenameNoExt = path.resolve(cliRoot, possibleArgs.join("-"));
-
-    for (const extension of EXTENSIONS) {
-      const filename = filenameNoExt + extension;
-      debug("Considering:", filename);
-      if (existsSync(filename)) {
-        debug("Found:", filename);
-        const positionalArgs = [...positionalArgsStack].reverse();
-        debug("Args:", positionalArgs);
-        debug("Flags:", flags);
-
-        const relativeFilename = "./" + path.relative(process.cwd(), filename);
-        debug("Relative filename:", relativeFilename);
-        return {
-          filename,
-          module: crossImport(filename),
-          positionalArgs,
-          flags,
-        };
-      }
+    const file = filesystem.getFile(NameImpl.from("./demo", possibleArgs)); // TODO?
+    if (file) {
+      const positionalArgs = [...positionalArgsStack].reverse();
+      debug("Args:", positionalArgs);
+      debug("Flags:", flags);
+      return {
+        file,
+        positionalArgs,
+        flags,
+      };
     }
 
     const arg = possibleArgs.pop();
     if (arg) {
       positionalArgsStack.push(arg);
     }
+  }
+
+  const programFile = filesystem.getFile(NameImpl.start("./demo")); // TODO?
+  if (programFile) {
+    const positionalArgs = [...positionalArgsStack].reverse();
+    debug("Args:", positionalArgs);
+    debug("Flags:", flags);
+    return {
+      file: programFile,
+      positionalArgs,
+      flags,
+    };
   }
 
   return null;
@@ -166,26 +119,12 @@ if (!script) {
   process.exit(1);
 }
 
-// Get the default export for the script
-let defaultExport: unknown;
-if (
-  typeof script.module === "object" &&
-  script.module !== null &&
-  "default" in script.module
-) {
-  defaultExport = script.module.default;
-} else {
-  console.error(`No default export in file '${script.filename}'`);
-  process.exit(1);
-}
-
 // Run the default export
-// TODO: This is because imported-from-TS Entrypoint != one from this context? Investigate.
-if (Runnable.is(defaultExport)) {
-  debug("Executing runnable for", script.filename);
-  const exitCode = await defaultExport.run({
-    cliRootDirectory: cliRoot,
-    ownFilename: script.filename,
+const runnable = script.file.import();
+if (runnable) {
+  debug("Executing runnable for", script.file.filename);
+  const exitCode = await runnable.run({
+    filesystem,
     flags: script.flags,
     positional: script.positionalArgs,
   });
@@ -193,7 +132,7 @@ if (Runnable.is(defaultExport)) {
   process.exitCode = exitCode;
 } else {
   console.error(
-    `Unrecognized/unsupported default export in file '${script.filename}'`,
+    `Unrecognized/unsupported default export in file '${script.file.filename}'`,
   );
   process.exit(0);
 }
