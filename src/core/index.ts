@@ -5,7 +5,6 @@ import makeDebug from "debug";
 import { existsSync } from "fs";
 import path from "path";
 import { hideBin } from "yargs/helpers";
-import Entrypoint from "./entrypoint";
 import Runnable from "./runnable";
 
 const debug = makeDebug("espresso:entrypoint");
@@ -185,6 +184,8 @@ if (
 if (Runnable.is(defaultExport)) {
   debug("Executing runnable for", script.filename);
   const exitCode = await defaultExport.run({
+    cliRootDirectory: cliRoot,
+    ownFilename: script.filename,
     flags: script.flags,
     positional: script.positionalArgs,
   });

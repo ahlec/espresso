@@ -1,12 +1,12 @@
 import ProviderImpl, { Provider } from "./provider";
 
 class Program extends ProviderImpl<{ resources: {}; env: [] }> {
-  public static start(): Provider<{ resources: {}; env: [] }> {
-    return new Program();
+  public static start(name: string): Provider<{ resources: {}; env: [] }> {
+    return new Program(name);
   }
 
-  private constructor() {
-    super({});
+  private constructor(name: string) {
+    super(name, [], {});
   }
 }
 

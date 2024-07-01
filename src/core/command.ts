@@ -232,6 +232,7 @@ class CommandImpl<
     fn: MainFn<TProvider, TContext>,
   ): Entrypoint<TProvider, TContext> {
     return new Entrypoint<TProvider, TContext>(
+      this.name,
       this.provider,
       fn,
       Object.values(this.using),

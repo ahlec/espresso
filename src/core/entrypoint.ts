@@ -82,13 +82,14 @@ class Entrypoint<
   TCommand extends CommandConstraint<TProvider>,
 > extends Runnable {
   public constructor(
+    name: string,
     private readonly provider: ProviderContext<TProvider>,
     private readonly main: MainFn<TProvider, TCommand>,
     private readonly dependencies: readonly Dependency<TProvider>[],
     private readonly args: TCommand["args"],
     private readonly flags: FlagManager,
   ) {
-    super();
+    super(name, provider.stack);
   }
 
   public async run({ positional, flags }: RunArguments): Promise<number> {
