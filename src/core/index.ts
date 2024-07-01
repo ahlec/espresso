@@ -2,8 +2,9 @@ import makeDebug from "debug";
 import { existsSync } from "fs";
 import path from "path";
 import { hideBin } from "yargs/helpers";
-import Filesystem, { EspressoFile } from "./filesystem";
+import FilesystemManager, { EspressoFile } from "./filesystem-manager";
 import NameImpl from "./name";
+import { LocalFilesystem } from "./filesystem";
 
 const debug = makeDebug("espresso:entrypoint");
 
@@ -17,7 +18,7 @@ if (!existsSync(cliRoot)) {
   process.exit(1);
 }
 
-const filesystem = new Filesystem(cliRoot);
+const filesystem = new FilesystemManager(new LocalFilesystem(), cliRoot);
 
 // Locate the right script to run
 interface ImportScript {

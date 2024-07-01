@@ -2,7 +2,7 @@ import chalk from "chalk";
 import makeDebug from "debug";
 import Runnable, { RunArguments } from "./runnable";
 import { hasHelpFlag } from "./flag";
-import Filesystem from "./filesystem";
+import FilesystemManager from "./filesystem-manager";
 
 const debug = makeDebug("espresso:group");
 
@@ -41,7 +41,7 @@ class Group extends Runnable {
     return 0;
   }
 
-  private printHelpMessage(filesystem: Filesystem): void {
+  private printHelpMessage(filesystem: FilesystemManager): void {
     const children = this.getChildren(filesystem);
     debug(
       "children:",
@@ -52,7 +52,7 @@ class Group extends Runnable {
     console.log(this.name.groups.join(" "), chalk.bold(this.name.self));
   }
 
-  private getChildren(filesystem: Filesystem): readonly Runnable[] {
+  private getChildren(filesystem: FilesystemManager): readonly Runnable[] {
     const files = filesystem.findAllChildren(this.name);
     debug(
       "Filenames to import:",

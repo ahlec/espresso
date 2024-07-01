@@ -1,8 +1,8 @@
-import Filesystem from "./filesystem";
+import FilesystemManager from "./filesystem-manager";
 import Name from "./name";
 
 export interface RunArguments {
-  filesystem: Filesystem;
+  filesystem: FilesystemManager;
   positional: readonly string[];
   flags: Record<string, string | boolean | undefined>;
 }
