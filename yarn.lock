@@ -5,8 +5,14 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"espresso@workspace:.":
+"espresso@workspace:packages/espresso":
   version: 0.0.0-use.local
-  resolution: "espresso@workspace:."
+  resolution: "espresso@workspace:packages/espresso"
+  languageName: unknown
+  linkType: soft
+
+"root-workspace-0b6124@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "root-workspace-0b6124@workspace:."
   languageName: unknown
   linkType: soft
