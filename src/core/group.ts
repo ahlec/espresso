@@ -11,6 +11,7 @@ class Group extends Runnable {
     filesystem,
     flags,
     positional,
+    output,
   }: RunArguments): Promise<number> {
     debug("name:", this.name);
     // Help flags take priority
@@ -32,7 +33,7 @@ class Group extends Runnable {
         return 1;
       }
 
-      return runnable.run({ filesystem, flags, positional });
+      return runnable.run({ filesystem, output, flags, positional });
     }
 
     // This group doesn't perform any action when invoked, so print out

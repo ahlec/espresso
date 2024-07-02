@@ -9,8 +9,9 @@ import ProviderContext, { Dependency } from "./provider-context";
 import UndoStack from "./undo-stack";
 import Runnable, { RunArguments } from "./runnable";
 import FlagManager from "./flag-manager";
-import { LongFlag, ShortFlag } from "./flag";
+import { hasHelpFlag, LongFlag, ShortFlag } from "./flag";
 import Name from "./name";
+import { Output } from "./output";
 
 const debug = makeDebug("espresso:command");
 
@@ -78,6 +79,14 @@ export type MainFn<
   ctx: MainContext<TProvider, TContext>,
 ) => MainReturnType | Promise<MainReturnType>;
 
+function argToString(arg: ArgDefinition): string {
+  return arg.optional ? `[${arg.name}]` : arg.name;
+}
+
+function maxLength(strs: readonly string[]): number {
+  return strs.reduce((prev, curr) => Math.max(prev, curr.length), 0);
+}
+
 class Entrypoint<
   TProvider extends ProviderConstraint,
   TCommand extends CommandConstraint<TProvider>,
@@ -93,7 +102,16 @@ class Entrypoint<
     super(name);
   }
 
-  public async run({ positional, flags }: RunArguments): Promise<number> {
+  public async run({
+    output,
+    positional,
+    flags,
+  }: RunArguments): Promise<number> {
+    if (hasHelpFlag(flags)) {
+      this.printHelpMessage(output);
+      return 0;
+    }
+
     const args = this.bindArgs(positional);
     if (!args.success) {
       // TODO: output missing args error message
@@ -140,6 +158,50 @@ class Entrypoint<
       }
     } finally {
       await undoStack.undo();
+    }
+  }
+
+  private printHelpMessage(output: Output): void {
+    output.writeLine(
+      `Usage: ${this.name.toString()} ${this.args.map((arg) => argToString(arg)).join(" ")}`,
+    );
+
+    if (this.args.length) {
+      output.writeLine("  Arguments:");
+
+      const longestArg = maxLength(this.args.map((a) => argToString(a)));
+
+      this.args.forEach((arg): void => {
+        output.writeLine(
+          "    " +
+            argToString(arg).padEnd(longestArg, " ") +
+            "   " +
+            (arg.description || ""),
+        );
+      });
+    }
+
+    if (!this.flags.isEmpty) {
+      if (this.args.length) {
+        output.writeLine("");
+      }
+
+      output.writeLine("  Options:");
+
+      const longestDisplayNames = maxLength(
+        this.flags.definitions.map((d) => d.displayNames.join(", ")),
+      );
+
+      this.flags.definitions.forEach((definition): void => {
+        output.writeLine(
+          "    " +
+            definition.displayNames
+              .join(", ")
+              .padEnd(longestDisplayNames, " ") +
+            "   " +
+            (definition.description || ""),
+        );
+      });
     }
   }
 

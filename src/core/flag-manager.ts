@@ -3,7 +3,7 @@ import { FlagDefinition } from "./flag";
 class FlagManager {
   private readonly usedNames: ReadonlySet<string>;
 
-  public constructor(private readonly definitions: readonly FlagDefinition[]) {
+  public constructor(public readonly definitions: readonly FlagDefinition[]) {
     const used = new Set<string>();
     definitions.forEach(({ name, aliases }): void => {
       used.add(name);

@@ -5,10 +5,13 @@ import { hideBin } from "yargs/helpers";
 import FilesystemManager, { EspressoFile } from "./filesystem-manager";
 import NameImpl from "./name";
 import { LocalFilesystem } from "./filesystem";
+import { ConsoleOutput } from "./output";
 
 const debug = makeDebug("espresso:entrypoint");
 
 const [cliRootRelative, ...cliArgsRaw] = hideBin(process.argv);
+
+const output = new ConsoleOutput();
 
 // Validate the CLI root
 const cliRoot = path.resolve(String(cliRootRelative));
@@ -126,6 +129,7 @@ if (runnable) {
   debug("Executing runnable for", script.file.filename);
   const exitCode = await runnable.run({
     filesystem,
+    output,
     flags: script.flags,
     positional: script.positionalArgs,
   });

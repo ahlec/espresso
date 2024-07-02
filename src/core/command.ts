@@ -1,3 +1,4 @@
+import { option } from "yargs";
 import { ArgDefinition } from "./argument";
 import Entrypoint, { MainFn } from "./entrypoint";
 import { Flag, FlagDefinition, parseFlag } from "./flag";
@@ -51,7 +52,10 @@ type AddArg<
 > = Constrain<
   TProvider,
   {
-    args: [...TContext["args"], { name: TName; optional: TOptional }];
+    args: [
+      ...TContext["args"],
+      { name: TName; description: string | null; optional: TOptional },
+    ];
     flags: TContext["flags"];
     hasOptionalArg: BooleanOr<TContext["hasOptionalArg"], TOptional>;
     using: TContext["using"];
@@ -71,10 +75,11 @@ interface ArgRequiredOrOptional<
 > {
   <TName extends string>(
     name: TName,
+    description?: string,
   ): Command<TProvider, AddArg<TProvider, TContext, TName, false>>;
   <TName extends string, const TOptional extends boolean>(
     name: TName,
-    opts: { optional: TOptional },
+    opts: { description?: string; optional: TOptional },
   ): Command<TProvider, AddArg<TProvider, TContext, TName, TOptional>>;
 }
 
@@ -84,7 +89,7 @@ interface ArgOptionalOnly<
 > {
   <TName extends string>(
     name: TName,
-    opts: { optional: true },
+    opts: { description?: string; optional: true },
   ): Command<TProvider, AddArg<TProvider, TContext, TName, true>>;
 }
 
@@ -104,6 +109,7 @@ type AddFlag<
 
 interface FlagOptions {
   aliases?: readonly Flag[];
+  description?: string;
 }
 
 export interface Command<
@@ -148,6 +154,7 @@ class CommandImpl<
 
   public arg<TName extends string>(
     name: TName,
+    description?: string,
   ): Command<TProvider, AddArg<TProvider, TContext, TName, false>>;
   public arg<TName extends string, const TOptional extends boolean>(
     name: TName,
@@ -155,8 +162,19 @@ class CommandImpl<
   ): Command<TProvider, AddArg<TProvider, TContext, TName, TOptional>>;
   public arg<TName extends string>(
     name: TName,
-    { optional = false }: { optional?: boolean } = {},
+    second: { description?: string; optional?: boolean } | string = {},
   ): Command<TProvider, AddArg<TProvider, TContext, TName, boolean>> {
+    // Manage the secondary parameter
+    let description: string | null;
+    let optional: boolean;
+    if (typeof second === "string") {
+      description = second;
+      optional = false;
+    } else {
+      description = second.description ?? null;
+      optional = second.optional ?? false;
+    }
+
     // Validate the `optional` parameter
     if (!optional) {
       // This argument can only be required if there are no optional arguments already
@@ -173,7 +191,7 @@ class CommandImpl<
     >(
       this.provider,
       this.name,
-      [...this.args, { name, optional }],
+      [...this.args, { name, description: description ?? null, optional }],
       this.flags,
       this.using,
     );
@@ -181,7 +199,7 @@ class CommandImpl<
 
   public flag<TFlag extends Flag>(
     flag: TFlag,
-    { aliases: rawAliases = [] }: FlagOptions = {},
+    { description, aliases: rawAliases = [] }: FlagOptions = {},
   ): Command<TProvider, AddFlag<TProvider, TContext, TFlag>> {
     const name = parseFlag(flag);
     if (this.flags.isUsing(name)) {
@@ -209,7 +227,12 @@ class CommandImpl<
       this.provider,
       this.name,
       this.args,
-      this.flags.append({ name, aliases }),
+      this.flags.append({
+        name,
+        aliases,
+        displayNames: [flag, ...rawAliases], // TODO: Shouldn't be rawAliases b/c not deduped
+        description: description ?? null,
+      }),
       this.using,
     );
   }

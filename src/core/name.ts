@@ -92,6 +92,10 @@ class NameImpl implements Name {
 
     return new NameImpl(this.program, this.groups, this.self, "group-default");
   }
+
+  public toString(): string {
+    return [this.program, ...this.groups, this.self].join(" ");
+  }
 }
 
 export default NameImpl;

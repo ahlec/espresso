@@ -33,6 +33,8 @@ export type Flag = ShortFlag | LongFlag;
 export interface FlagDefinition {
   name: string;
   aliases: readonly string[];
+  displayNames: readonly string[];
+  description: string | null;
 }
 
 function parseShortFlag(str: ShortFlag): string {
