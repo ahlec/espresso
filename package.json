@@ -3,9 +3,14 @@
   "workspaces": [
     "packages/*"
   ],
+  "scripts": {
+    "format": "prettier --write ."
+  },
   "devDependencies": {
     "@types/node": "^20.14.8",
+    "prettier": "^3.3.2",
     "tsx": "^4.15.7",
     "typescript": "^5.5.3"
-  }
+  },
+  "prettier": {}
 }
