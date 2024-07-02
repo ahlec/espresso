@@ -3,6 +3,7 @@ import makeDebug from "debug";
 import Runnable, { RunArguments } from "./runnable";
 import { hasHelpFlag } from "./flag";
 import FilesystemManager from "./filesystem-manager";
+import { Output } from "./output";
 
 const debug = makeDebug("espresso:group");
 
@@ -17,7 +18,7 @@ class Group extends Runnable {
     // Help flags take priority
     if (hasHelpFlag(flags)) {
       debug("Help flag present");
-      this.printHelpMessage(filesystem);
+      this.printHelpMessage(filesystem, output);
       return 0;
     }
 
@@ -38,19 +39,27 @@ class Group extends Runnable {
 
     // This group doesn't perform any action when invoked, so print out
     // the help message to facilitate navigation.
-    this.printHelpMessage(filesystem);
+    this.printHelpMessage(filesystem, output);
     return 0;
   }
 
-  private printHelpMessage(filesystem: FilesystemManager): void {
+  private printHelpMessage(
+    filesystem: FilesystemManager,
+    output: Output,
+  ): void {
     const children = this.getChildren(filesystem);
     debug(
       "children:",
       children.map((child) => child.name),
     );
 
-    console.log("help message for", this.name); // TODO
-    console.log(this.name.groups.join(" "), chalk.bold(this.name.self));
+    output.writeLine(`Usage: ${this.name.toString()}`);
+    if (children.length) {
+      output.writeLine("  Subcommands:");
+      children.forEach((child) => {
+        output.writeLine(`    ${child.name}`);
+      });
+    }
   }
 
   private getChildren(filesystem: FilesystemManager): readonly Runnable[] {
