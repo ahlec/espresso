@@ -1,3 +1,3 @@
-import { HELLO_WORLD } from "@espresso/consts";
+import { HELLO_WORLD } from "./consts";
 
 console.log(HELLO_WORLD);
