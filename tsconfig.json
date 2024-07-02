@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+      "esModuleInterop": true,
+      "baseUrl": "./",
+      "paths": {
+        "@espresso/*": ["./packages/espresso/src/*"]
+      },
+      "module": "ESNext",
+      "moduleResolution": "Node",
+      "target": "ES2019",
+      "strict": true,
+      "outDir": "dist"
+    }
+  }
+  

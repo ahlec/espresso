@@ -2,5 +2,10 @@
   "packageManager": "yarn@4.3.1",
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "tsx": "^4.15.7",
+    "typescript": "^5.5.3"
+  }
 }
