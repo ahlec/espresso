@@ -72,7 +72,7 @@ export interface Provider<Context extends ProviderContext> {
   provide<
     T,
     Name extends string,
-    Dependencies extends DependenciesOpt<Context>,
+    const Dependencies extends DependenciesOpt<Context>,
   >(
     name: Name,
     fn: ProvideFn<Context, T, Dependencies>,
