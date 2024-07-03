@@ -1,10 +1,12 @@
 import { CommandContext, ProviderContext } from "./context";
 import { PublishedResources } from "./provider-utils";
+import { Collapse } from "./utils";
 
 type ContextConstraint<T extends CommandContext> = T;
 
-export type BeginCommandContext<Provider extends ProviderContext> =
-  ContextConstraint<{ provider: Provider; using: never }>;
+export type BeginCommandContext<Provider extends ProviderContext> = Collapse<
+  ContextConstraint<{ provider: Provider; using: never }>
+>;
 
 export type UnusedResources<Context extends CommandContext> = Exclude<
   PublishedResources<Context["provider"]>,
@@ -14,7 +16,9 @@ export type UnusedResources<Context extends CommandContext> = Exclude<
 export type Use<
   Context extends CommandContext,
   Resource extends UnusedResources<Context>,
-> = ContextConstraint<{
-  provider: Context["provider"];
-  using: Context["using"] | (Resource & string);
-}>;
+> = Collapse<
+  ContextConstraint<{
+    provider: Context["provider"];
+    using: Context["using"] | (Resource & string);
+  }>
+>;

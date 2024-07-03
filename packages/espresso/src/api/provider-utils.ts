@@ -1,4 +1,5 @@
 import { ProviderContext, ResourceContext } from "./context";
+import { Collapse } from "./utils";
 
 type ContextConstraint<T extends ProviderContext> = T;
 
@@ -43,29 +44,33 @@ export type Provide<
   T,
   Name extends string,
   Dependencies extends DependenciesOpt<Context>,
-> = ContextConstraint<{
-  resources: Context["resources"] & {
-    [K in Name]: ResourceContextConstraint<
-      Context,
-      {
-        dependencies: Dependencies extends undefined ? [] : Dependencies;
-        published: false;
-        type: T;
-      }
-    >;
-  };
-}>;
+> = Collapse<
+  ContextConstraint<{
+    resources: Context["resources"] & {
+      [K in Name]: ResourceContextConstraint<
+        Context,
+        {
+          dependencies: Dependencies extends undefined ? [] : Dependencies;
+          published: false;
+          type: T;
+        }
+      >;
+    };
+  }>
+>;
 
 export type Publish<
   Context extends ProviderContext,
   Name extends UnpublishedResources<Context>,
-> = ContextConstraint<{
-  resources: {
-    [K in keyof Context["resources"]]: K extends Name
-      ? ResourceContextConstraint<
-          Context,
-          Omit<Context["resources"][K], "published"> & { published: true }
-        >
-      : Context["resources"][K];
-  };
-}>;
+> = Collapse<
+  ContextConstraint<{
+    resources: {
+      [K in keyof Context["resources"]]: K extends Name
+        ? ResourceContextConstraint<
+            Context,
+            Omit<Context["resources"][K], "published"> & { published: true }
+          >
+        : Context["resources"][K];
+    };
+  }>
+>;
