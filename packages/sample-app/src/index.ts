@@ -4,7 +4,7 @@ import Cache from "./resources/Cache";
 import Logger from "./resources/Logger";
 import Database from "./resources/Database";
 
-export default espresso()
+export default espresso("sample")
   .provide("logger", () => new Logger())
   .provide("database", ({ logger }) => new Database(logger), {
     dispose: (database) => database.dispose(),

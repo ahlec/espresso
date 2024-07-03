@@ -8,6 +8,6 @@ export type { Provider } from "./api/provider";
 /**
  * Constructs a new application -- the root of your CLI tree.
  */
-export function espresso(): Application<BeginProviderContext> {
-  return ApplicationImpl.begin();
+export function espresso(name: string): Application<BeginProviderContext> {
+  return ApplicationImpl.begin(name);
 }

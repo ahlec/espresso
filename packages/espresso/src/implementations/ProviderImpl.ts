@@ -7,10 +7,13 @@ import {
   PublishedResources,
   Publish,
 } from "@espresso/api/provider-utils";
+import { Name } from "./Name";
 
 export class ProviderImpl<Context extends ProviderContext>
   implements Provider<Context>
 {
+  public constructor(public readonly name: Name) {}
+
   public provide<
     T,
     Name extends string,
