@@ -2,6 +2,11 @@ import { ProviderContext, ResourceContext } from "./context";
 
 type ContextConstraint<T extends ProviderContext> = T;
 
+export type BeginProviderContext = ContextConstraint<{
+  // eslint-disable-next-line @typescript-eslint/ban-types -- Using Record<string, never> here breaks our types down the road
+  resources: {};
+}>;
+
 export type DependenciesOpt<Context extends ProviderContext> =
   | readonly (keyof Context["resources"])[]
   | undefined;

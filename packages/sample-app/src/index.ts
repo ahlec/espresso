@@ -1,12 +1,10 @@
-import { Application } from "espresso/src/api/application";
+// eslint-disable-next-line -- PnP doesn't play nicely with this when we do't include /index
+import { espresso } from "espresso/src/index";
 import Cache from "./resources/Cache";
 import Logger from "./resources/Logger";
 import Database from "./resources/Database";
 
-// eslint-disable-next-line
-const app = {} as Application<{ resources: {} }>;
-
-export default app
+export default espresso()
   .provide("logger", () => new Logger())
   .provide("database", ({ logger }) => new Database(logger), {
     dispose: (database) => database.dispose(),
