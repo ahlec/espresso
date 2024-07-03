@@ -4,7 +4,8 @@
     "packages/*"
   ],
   "scripts": {
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "sample": "yarn workspace sample-app start"
   },
   "devDependencies": {
     "@ahlec/eslint-plugin": "^0.0.3",

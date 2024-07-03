@@ -2206,7 +2206,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"espresso@workspace:packages/espresso":
+"espresso@workspace:^, espresso@workspace:packages/espresso":
   version: 0.0.0-use.local
   resolution: "espresso@workspace:packages/espresso"
   dependencies:
@@ -4206,6 +4206,17 @@ __metadata:
   checksum: 10c0/7e3c8b2e88a1841c9671094bbaeebd94448111dd90a81a1f606f3f67708a6ec57763b3b47f06da09fc6054193e0e6709e77325415dc8422b04497a8070fa02d4
   languageName: node
   linkType: hard
+
+"sample-app@workspace:packages/sample-app":
+  version: 0.0.0-use.local
+  resolution: "sample-app@workspace:packages/sample-app"
+  dependencies:
+    "@types/node": "npm:^20.14.8"
+    espresso: "workspace:^"
+    tsx: "npm:^4.15.7"
+    typescript: "npm:^5.5.3"
+  languageName: unknown
+  linkType: soft
 
 "semver@npm:^6.3.0, semver@npm:^6.3.1":
   version: 6.3.1

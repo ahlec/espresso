@@ -1,0 +1,14 @@
+{
+  "name": "sample-app",
+  "packageManager": "yarn@4.3.1",
+  "type": "module",
+  "scripts": {
+    "start": "tsx ./src/index.ts"
+  },
+  "dependencies": {
+    "@types/node": "^20.14.8",
+    "espresso": "workspace:^",
+    "tsx": "^4.15.7",
+    "typescript": "^5.5.3"
+  }
+}
