@@ -28,6 +28,15 @@ type ResourceContextConstraint<
   T extends ResourceContext<Provider, unknown>,
 > = T;
 
+export type ValidateResourceName<
+  Name extends string,
+  Context extends ProviderContext,
+> = Name extends ""
+  ? never
+  : Name extends keyof Context["resources"]
+    ? never
+    : Name;
+
 export type ProvideFnDependencies<
   Context extends ProviderContext,
   Dependencies extends DependenciesOpt<Context>,

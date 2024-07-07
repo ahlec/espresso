@@ -6,6 +6,7 @@ import {
   ProvideFnDependencies,
   Publish,
   UnpublishedResources,
+  ValidateResourceName,
 } from "./provider-utils";
 
 type ProvideFn<
@@ -61,9 +62,9 @@ export interface Provider<Context extends ProviderContext> {
    * @param name The name of this dependency. This is what commands and
    * other dependencies will reference when indicating this dependency.
    *
-   * Any string is valid, but a valid JavaScript identifier is most
-   * convenient as the name will be used as a field in the resources object
-   * given to the command.
+   * Any non-empty string is valid, but a valid JavaScript identifier is
+   * most convenient as the name will be used as a field in the resources
+   * object given to the command.
    * @param fn The constructor function. This function is called to instantiate
    * the resource, when it is needed. If this resource has any dependencies
    * of its own, they will be provided as a parameter.
@@ -74,7 +75,7 @@ export interface Provider<Context extends ProviderContext> {
     Name extends string,
     const Dependencies extends DependenciesOpt<Context>,
   >(
-    name: Name,
+    name: ValidateResourceName<Name, Context>,
     fn: ProvideFn<Context, T, Dependencies>,
     opts?: ProvideOpts<Context, T, Dependencies>,
   ): Provider<Provide<Context, T, Name, Dependencies>>;
